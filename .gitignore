@@ -1,0 +1,25 @@
+﻿# .NET
+**/bin/
+**/obj/
+**/.vs/
+**/TestResults/
+
+# Secrets and environment files
+**/.env
+**/.env.*
+!**/.env.example
+**/appsettings.Development.json
+**/secrets.json
+
+# Frontend dependencies and builds
+**/node_modules/
+**/dist/
+**/build/
+**/.next/
+**/coverage/
+
+# IDE and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
