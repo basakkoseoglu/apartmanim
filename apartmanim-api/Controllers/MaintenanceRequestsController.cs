@@ -56,6 +56,8 @@ public class MaintenanceRequestsController : ControllerBase
             RequesterId = userId,
             Title = request.Title.Trim(),
             Description = request.Description.Trim(),
+            Location = request.Location.Trim(),
+            Priority = request.Priority,
             Status = "Pending",
             CreatedAt = DateTime.UtcNow
         };
@@ -103,6 +105,8 @@ public async Task<IActionResult> GetMyRequests()
                 : (int?)null,
             r.Title,
             r.Description,
+            r.Location,
+            r.Priority,
             r.Status,
             r.CreatedAt,
             r.UpdatedAt
@@ -166,6 +170,8 @@ var requests = await query
         r.Title,
         r.Description,
         r.Status,
+        r.Location,
+        r.Priority,
         r.CreatedAt,
         r.UpdatedAt,
         r.RequesterId
@@ -238,6 +244,8 @@ public class CreateMaintenanceRequest
 {
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
+    public string Priority { get; set; } = "Medium";
 }
 
 

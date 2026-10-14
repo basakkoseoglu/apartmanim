@@ -1,4 +1,3 @@
-
 namespace apartmanim_api.Models;
 
 public class MaintenanceRequest
@@ -12,6 +11,10 @@ public class MaintenanceRequest
     public string Title { get; set; } = string.Empty;
 
     public string Description { get; set; } = string.Empty;
+
+    public string Location { get; set; } = string.Empty;
+
+    public string Priority { get; set; } = "Medium";
 
     public string Status { get; set; } = "Pending";
 

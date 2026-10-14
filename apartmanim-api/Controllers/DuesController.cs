@@ -55,7 +55,10 @@ if (!unitExists)
         {
             UnitId = request.UnitId,
             Amount = request.Amount,
-            DueDate = request.DueDate,
+           DueDate = DateTime.SpecifyKind(
+            request.DueDate,
+            DateTimeKind.Utc
+        ),
             Status = "Pending",
             PaidDate = null
         };

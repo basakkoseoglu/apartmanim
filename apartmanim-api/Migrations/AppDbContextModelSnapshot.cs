@@ -135,6 +135,14 @@ namespace apartmanim_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("RequesterId")
                         .HasColumnType("integer");
 
