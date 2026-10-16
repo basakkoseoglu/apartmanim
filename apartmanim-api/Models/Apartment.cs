@@ -12,6 +12,8 @@ public class Apartment
     public int TotalFloors { get; set; }
 
     public int TotalUnits { get; set; }
+    
+    public bool IsSetupComplete { get; set; } = false;
 
     public ICollection<Unit> Units { get; set; } = new List<Unit>();
 

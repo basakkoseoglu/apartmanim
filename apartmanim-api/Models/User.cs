@@ -12,6 +12,8 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
 
     public string Role { get; set; } = "Resident";
+    
+    public bool MustChangePassword { get; set; } = false;
 
     public int ApartmentId { get; set; }
 

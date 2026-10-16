@@ -26,59 +26,139 @@ public class AuthController : ControllerBase
         _passwordHasher = new PasswordHasher<User>();
     }
 
-    [HttpPost("register")]
-    public async Task<IActionResult> Register(
-        [FromBody] RegisterRequest request)
+   
+[Authorize(Roles = "Admin")]
+[HttpPost("residents")]
+public async Task<IActionResult> CreateResident(
+    [FromBody] CreateResidentRequest request)
+{
+    var apartmentIdValue = User.FindFirst("ApartmentId")?.Value;
+
+    if (!int.TryParse(apartmentIdValue, out var apartmentId))
     {
-        var email = request.Email.Trim().ToLowerInvariant();
+        return Unauthorized();
+    }
 
-        var existingUser = await _context.Users
-            .AnyAsync(u => u.Email.ToLower() == email);
+    var email = request.Email.Trim().ToLowerInvariant();
 
-        if (existingUser)
+    var emailExists = await _context.Users
+        .AnyAsync(u => u.Email.ToLower() == email);
+
+    if (emailExists)
+    {
+        return Conflict(new
         {
-            return Conflict(new
-            {
-                message = "Bu e-posta adresi zaten kayıtlı."
-            });
-        }
+            message = "Bu e-posta adresi zaten kayıtlı."
+        });
+    }
 
-        var apartmentExists = await _context.Apartments
-            .AnyAsync(a => a.Id == request.ApartmentId);
+    var unit = await _context.Units
+        .FirstOrDefaultAsync(u =>
+            u.Id == request.UnitId &&
+            u.ApartmentId == apartmentId);
 
-        if (!apartmentExists)
+    if (unit is null)
+    {
+        return NotFound(new
         {
-            return BadRequest(new
-            {
-                message = "Belirtilen apartman bulunamadı."
-            });
-        }
+            message = "Seçilen daire bu apartmanda bulunamadı."
+        });
+    }
 
-        var user = new User
+    if (unit.ResidentId != null)
+    {
+        return BadRequest(new
+        {
+            message = "Seçilen dairede zaten bir sakin bulunuyor."
+        });
+    }
+
+    await using var transaction =
+        await _context.Database.BeginTransactionAsync();
+
+    try
+    {
+        var resident = new User
         {
             FullName = request.FullName.Trim(),
             Email = email,
-            ApartmentId = request.ApartmentId,
-            Role = "Resident"
+            ApartmentId = apartmentId,
+            Role = "Resident",
+            MustChangePassword = true
         };
 
-        user.PasswordHash = _passwordHasher.HashPassword(
-            user, request.Password);
+        resident.PasswordHash = _passwordHasher.HashPassword(
+            resident,
+            request.TemporaryPassword);
 
-        _context.Users.Add(user);
+        _context.Users.Add(resident);
         await _context.SaveChangesAsync();
+
+        unit.ResidentId = resident.Id;
+        await _context.SaveChangesAsync();
+
+        await transaction.CommitAsync();
 
         return Created("", new
         {
-            message = "Kullanıcı başarıyla kaydedildi.",
-            user.Id,
-            user.FullName,
-            user.Email,
-            user.Role,
-            user.ApartmentId
+            message = "Sakin başarıyla oluşturuldu ve daireye atandı.",
+            resident = new
+            {
+                resident.Id,
+                resident.FullName,
+                resident.Email,
+                resident.Role,
+                resident.ApartmentId,
+                resident.MustChangePassword
+            },
+            unit = new
+            {
+                unit.Id,
+                unit.FloorNo,
+                unit.UnitNo
+            }
         });
     }
-    
+    catch
+    {
+        await transaction.RollbackAsync();
+        throw;
+    }
+}
+
+    [Authorize(Roles = "Admin")]
+[HttpGet("residents")]
+public async Task<IActionResult> GetResidents()
+{
+    var apartmentIdValue = User.FindFirst("ApartmentId")?.Value;
+
+    if (!int.TryParse(apartmentIdValue, out var apartmentId))
+        return Unauthorized();
+
+    var residents = await _context.Users
+        .Where(u =>
+            u.ApartmentId == apartmentId &&
+            u.Role == "Resident")
+        .Select(u => new
+        {
+            u.Id,
+            u.FullName,
+            u.Email,
+            Unit = _context.Units
+                .Where(unit => unit.ResidentId == u.Id)
+                .Select(unit => new
+                {
+                    unit.Id,
+                    unit.FloorNo,
+                    unit.UnitNo
+                })
+                .FirstOrDefault()
+        })
+        .ToListAsync();
+
+    return Ok(residents);
+}
+
 [HttpPost("login")]
 public async Task<IActionResult> Login(
     [FromBody] LoginRequest request)
@@ -109,23 +189,111 @@ public async Task<IActionResult> Login(
         });
     }
 
-    // JWT üretimini bir sonraki adımda ekleyeceğiz.
+    // İlk girişte şifre değişimi gerekiyorsa
+    // yalnızca şifre değiştirmeye izin veren token üret.
+    var token = GenerateJwtToken(
+        user,
+        user.MustChangePassword
+    );
+
+    return Ok(new
+    {
+        message = "Giriş başarılı.",
+        token,
+        mustChangePassword = user.MustChangePassword,
+        user = new
+        {
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Role,
+            user.ApartmentId
+        }
+    });
+}
+
+
+[Authorize]
+[HttpPost("change-password")]
+public async Task<IActionResult> ChangePassword(
+    [FromBody] ChangePasswordRequest request)
+{
+    var userIdValue = User.FindFirst(
+        ClaimTypes.NameIdentifier)?.Value;
+
+    if (!int.TryParse(userIdValue, out var userId))
+    {
+        return Unauthorized();
+    }
+
+    var user = await _context.Users
+        .FirstOrDefaultAsync(u => u.Id == userId);
+
+    if (user is null)
+    {
+        return Unauthorized();
+    }
+
+    var passwordChangeOnly = User.HasClaim(
+        "PasswordChangeOnly", "true");
+
+    if (!passwordChangeOnly && !user.MustChangePassword)
+    {
+        return BadRequest(new
+        {
+            message = "Şifre değiştirme işlemi gerekli değil."
+        });
+    }
+
+    if (request.NewPassword != request.ConfirmPassword)
+    {
+        return BadRequest(new
+        {
+            message = "Yeni şifreler birbiriyle eşleşmiyor."
+        });
+    }
+
+    if (request.NewPassword == request.CurrentPassword)
+    {
+        return BadRequest(new
+        {
+            message = "Yeni şifreniz mevcut şifrenizden farklı olmalı."
+        });
+    }
+
+    var passwordResult = _passwordHasher.VerifyHashedPassword(
+        user,
+        user.PasswordHash,
+        request.CurrentPassword);
+
+    if (passwordResult == PasswordVerificationResult.Failed)
+    {
+        return BadRequest(new
+        {
+            message = "Mevcut şifreniz hatalı."
+        });
+    }
+
+    user.PasswordHash = _passwordHasher.HashPassword(
+        user,
+        request.NewPassword);
+
+    user.MustChangePassword = false;
+
+    await _context.SaveChangesAsync();
+
+    // Şifre değişince normal yetkili yeni token üret.
     var token = GenerateJwtToken(user);
 
-return Ok(new
-{
-    message = "Giriş başarılı.",
-    token,
-    user = new
+    return Ok(new
     {
-        user.Id,
-        user.FullName,
-        user.Email,
-        user.Role,
-        user.ApartmentId
-    }
-});
+        message = "Şifreniz başarıyla değiştirildi.",
+        token,
+        mustChangePassword = false
+    });
 }
+
+
 [Authorize]
 [HttpGet("me")]
 public IActionResult Me()
@@ -148,7 +316,10 @@ public IActionResult AdminTest()
     });
 }
 
-private string GenerateJwtToken(User user)
+
+private string GenerateJwtToken(
+    User user,
+    bool passwordChangeOnly = false)
 {
     var jwtSettings = HttpContext.RequestServices
         .GetRequiredService<IConfiguration>();
@@ -159,20 +330,29 @@ private string GenerateJwtToken(User user)
     var expiresInMinutes = int.Parse(
         jwtSettings["Jwt:ExpiresInMinutes"]!);
 
-    var claims = new[]
+    var claims = new List<Claim>
     {
         new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
         new Claim(ClaimTypes.Name, user.FullName),
         new Claim(ClaimTypes.Email, user.Email),
         new Claim(ClaimTypes.Role, user.Role),
-        new Claim("ApartmentId", user.ApartmentId.ToString())
+        new Claim("ApartmentId", user.ApartmentId.ToString()),
+        new Claim(
+            "MustChangePassword",
+            passwordChangeOnly.ToString().ToLowerInvariant())
     };
+
+    if (passwordChangeOnly)
+    {
+        claims.Add(new Claim("PasswordChangeOnly", "true"));
+    }
 
     var securityKey = new SymmetricSecurityKey(
         Encoding.UTF8.GetBytes(key));
 
     var credentials = new SigningCredentials(
-        securityKey, SecurityAlgorithms.HmacSha256);
+        securityKey,
+        SecurityAlgorithms.HmacSha256);
 
     var token = new JwtSecurityToken(
         issuer: issuer,
@@ -186,7 +366,8 @@ private string GenerateJwtToken(User user)
 
 }
 
-public class RegisterRequest
+
+public class CreateResidentRequest
 {
     [Required]
     [StringLength(100, MinimumLength = 2)]
@@ -200,11 +381,12 @@ public class RegisterRequest
     [Required]
     [MinLength(8)]
     [StringLength(128)]
-    public string Password { get; set; } = string.Empty;
+    public string TemporaryPassword { get; set; } = string.Empty;
 
     [Range(1, int.MaxValue)]
-    public int ApartmentId { get; set; }
+    public int UnitId { get; set; }
 }
+
 
 public class LoginRequest
 {
@@ -216,4 +398,20 @@ public class LoginRequest
     [Required]
     [StringLength(128, MinimumLength = 1)]
     public string Password { get; set; } = string.Empty;
+}
+
+
+public class ChangePasswordRequest
+{
+    [Required]
+    [StringLength(128, MinimumLength = 8)]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(128, MinimumLength = 8)]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(128, MinimumLength = 8)]
+    public string ConfirmPassword { get; set; } = string.Empty;
 }

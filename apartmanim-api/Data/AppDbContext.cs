@@ -23,19 +23,16 @@ public class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         // Aynı apartmanda aynı kat ve daire numarası tekrarlanamaz.
-modelBuilder.Entity<Unit>()
-    .HasIndex(u => new { u.ApartmentId, u.FloorNo, u.UnitNo })
-    .IsUnique();
+        modelBuilder.Entity<Unit>()
+            .HasIndex(u => new { u.ApartmentId, u.FloorNo, u.UnitNo })
+            .IsUnique();
 
-// Bir sakin birden fazla daireye atanamaz.
-// PostgreSQL birden fazla NULL değerine izin verir.
-modelBuilder.Entity<Unit>()
-    .HasIndex(u => u.ResidentId)
-    .IsUnique();
-    // Aynı apartmanda aynı kat ve daire numarası tekrarlanamaz.
-modelBuilder.Entity<Unit>()
-    .HasIndex(u => new { u.ApartmentId, u.FloorNo, u.UnitNo })
-    .IsUnique();
+        // Bir sakin birden fazla daireye atanamaz.
+        // PostgreSQL birden fazla NULL değerine izin verir.
+        modelBuilder.Entity<Unit>()
+            .HasIndex(u => u.ResidentId)
+            .IsUnique();
+
 
         // E-posta adresleri benzersiz olmalı.
         modelBuilder.Entity<User>()

@@ -4,6 +4,7 @@ using apartmanim_api.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +64,25 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Controller ve OpenAPI
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT token'ınızı girin."
+    });
+
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+    });
+});
 
 // JWT kimlik doğrulama
 builder.Services
@@ -97,15 +117,49 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 
 app.UseHttpsRedirection();
 app.UseCors("ApartmanimClient");
 
+
 app.UseAuthentication();
+
+// İlk giriş şifresi değiştirilene kadar
+// geçici token yalnızca şifre değiştirme endpoint'ine erişebilir.
+app.Use(async (context, next) =>
+{
+    var isPasswordChangeOnly = context.User.Identity?.IsAuthenticated == true
+        && context.User.HasClaim("PasswordChangeOnly", "true");
+
+    var isChangePasswordEndpoint =
+        HttpMethods.IsPost(context.Request.Method)
+        && context.Request.Path.Equals(
+            "/api/auth/change-password",
+            StringComparison.OrdinalIgnoreCase);
+
+    if (isPasswordChangeOnly && !isChangePasswordEndpoint)
+    {
+        context.Response.StatusCode =
+            StatusCodes.Status403Forbidden;
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            message = "Devam etmek için önce şifrenizi değiştirmelisiniz."
+        });
+
+        return;
+    }
+
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllers();
+
 
 app.Run();
