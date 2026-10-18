@@ -1291,3 +1291,340 @@ a:hover {
     min-width: 650px;
   }
 }
+
+
+/* ============================================
+   APARTMAN KURULUMU
+   Mevcut Apartmanım tasarım diline uygun
+   ============================================ */
+
+.setup-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-8) var(--space-4);
+  background: var(--color-bg);
+}
+
+.setup-container {
+  width: 100%;
+  max-width: 680px;
+  margin: auto;
+}
+
+.setup-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+}
+
+.setup-brand-mark {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  color: var(--color-accent);
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+}
+
+.setup-brand h1 {
+  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+}
+
+.setup-brand p {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.setup-progress {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.setup-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.setup-step > span {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-border-light);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.setup-step.active {
+  border-color: var(--color-primary);
+  background: #F3F6FC;
+}
+
+.setup-step.active > span,
+.setup-step.completed > span {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+.setup-step.completed > span {
+  background: var(--color-accent);
+  color: var(--color-primary-dark);
+}
+
+.setup-step strong,
+.setup-step small {
+  display: block;
+}
+
+.setup-step strong {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.setup-step small {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.setup-card {
+  padding: var(--space-8);
+}
+
+.setup-card-heading {
+  padding-bottom: var(--space-6);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.setup-eyebrow {
+  display: inline-block;
+  margin-bottom: var(--space-3);
+  color: var(--color-accent-dark);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.setup-card-heading h2 {
+  font-size: var(--font-size-2xl);
+  letter-spacing: -0.5px;
+}
+
+.setup-card-heading p {
+  max-width: 500px;
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+}
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.setup-address {
+  min-height: 88px;
+}
+
+.setup-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.setup-submit {
+  width: 100%;
+  margin-top: var(--space-2);
+  gap: var(--space-3);
+}
+
+.setup-floor-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.setup-floor-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 32px;
+  align-items: end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.setup-floor-number {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  gap: 2px;
+}
+
+.setup-floor-number span {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.setup-floor-number strong {
+  color: var(--color-primary);
+  font-size: var(--font-size-lg);
+}
+
+.setup-floor-field {
+  min-width: 0;
+}
+
+.setup-floor-field .form-input {
+  min-width: 0;
+}
+
+.setup-remove {
+  width: 32px;
+  height: 40px;
+  padding: 0;
+  font-size: 1.4rem;
+}
+
+.setup-add-floor {
+  align-self: flex-start;
+  gap: var(--space-2);
+}
+
+.setup-add-floor > span {
+  color: var(--color-accent-dark);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.setup-total {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.setup-total > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.setup-total > div + div {
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--color-border);
+}
+
+.setup-total span {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.setup-total strong {
+  color: var(--color-primary);
+  font-size: var(--font-size-2xl);
+  line-height: 1.3;
+}
+
+.setup-footer {
+  margin-top: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.setup-footer span {
+  padding: 0 var(--space-1);
+  color: var(--color-accent-dark);
+}
+
+@media (max-width: 520px) {
+  .setup-page {
+    padding: var(--space-5) var(--space-3);
+  }
+
+  .setup-brand {
+    margin-bottom: var(--space-5);
+  }
+
+  .setup-progress {
+    gap: var(--space-2);
+  }
+
+  .setup-step {
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+
+  .setup-step > span {
+    width: 28px;
+    height: 28px;
+  }
+
+  .setup-step strong {
+    font-size: 11px;
+  }
+
+  .setup-step small {
+    font-size: 10px;
+  }
+
+  .setup-card {
+    padding: var(--space-5);
+  }
+
+  .setup-card-heading h2 {
+    font-size: var(--font-size-xl);
+  }
+
+  .setup-floor-row {
+    grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1fr) 28px;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .setup-remove {
+    width: 28px;
+  }
+
+  .setup-floor-field .form-label {
+    font-size: 11px;
+  }
+
+  .setup-floor-field .form-input {
+    padding: var(--space-2);
+  }
+}

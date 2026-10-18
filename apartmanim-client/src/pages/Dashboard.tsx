@@ -8,7 +8,6 @@ import { useAuth } from '../context/AuthContext';
 import type { Due } from '../types';
 
 import {
-  getAllDues,
   getMyDues,
   getDuesSummary,
 } from '../api/duesApi';

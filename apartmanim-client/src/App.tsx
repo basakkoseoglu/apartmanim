@@ -169,14 +169,24 @@ function AppRoutes() {
   );
 }
 
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <BuildingProvider>
-          <AppRoutes />
-        </BuildingProvider>
+        <AppContent />
       </AuthProvider>
     </BrowserRouter>
   );
 }
+
+function AppContent() {
+  const { user } = useAuth();
+
+  return (
+    <BuildingProvider key={user?.id ?? 'no-user'}>
+      <AppRoutes />
+    </BuildingProvider>
+  );
+}
+

@@ -29,7 +29,7 @@ interface ApiLoginResponse {
     fullName: string;
     email: string;
     role: string;
-    apartmentId: number;
+    apartmentId: number | null;
   };
   message: string;
   mustChangePassword: boolean;

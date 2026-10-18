@@ -19,45 +19,83 @@ public class ApartmentsController : ControllerBase
         _context = context;
     }
 
+    
+public class CreateApartmentRequest
+{
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.StringLength(150, MinimumLength = 2)]
+    public string Name { get; set; } = string.Empty;
+
+    [System.ComponentModel.DataAnnotations.Required]
+    [System.ComponentModel.DataAnnotations.StringLength(300, MinimumLength = 5)]
+    public string Address { get; set; } = string.Empty;
+}
+
+
     // Yöneticinin kendi apartmanının kurulum durumunu getirir.
     [HttpGet("setup-status")]
-    public async Task<IActionResult> GetSetupStatus()
+public async Task<IActionResult> GetSetupStatus()
+{
+    var admin = await GetCurrentAdminAsync();
+
+    if (admin == null)
+        return Unauthorized();
+
+    // Yönetici henüz apartman oluşturmadıysa kurulum tamamlanmamıştır.
+    if (!admin.ApartmentId.HasValue)
     {
-        if (!TryGetApartmentId(out var apartmentId))
-            return Unauthorized();
-
-        var apartment = await _context.Apartments
-            .AsNoTracking()
-            .Where(a => a.Id == apartmentId)
-            .Select(a => new
-            {
-                a.Id,
-                a.Name,
-                a.Address,
-                a.TotalFloors,
-                a.TotalUnits,
-                a.IsSetupComplete
-            })
-            .FirstOrDefaultAsync();
-
-        if (apartment == null)
+        return Ok(new
         {
-            return NotFound(new
-            {
-                message = "Apartman bulunamadı."
-            });
-        }
-
-        return Ok(apartment);
+            isSetupComplete = false
+        });
     }
+
+    var apartmentId = admin.ApartmentId.Value;
+
+    var apartment = await _context.Apartments
+        .AsNoTracking()
+        .Where(a => a.Id == apartmentId)
+        .Select(a => new
+        {
+            a.Id,
+            a.Name,
+            a.Address,
+            a.TotalFloors,
+            a.TotalUnits,
+            a.IsSetupComplete
+        })
+        .FirstOrDefaultAsync();
+
+    if (apartment == null)
+    {
+        return NotFound(new
+        {
+            message = "Apartman bulunamadı."
+        });
+    }
+
+    return Ok(apartment);
+}
 
     // İlk kurulumu yapar ve tüm daireleri oluşturur.
     [HttpPost("setup")]
     public async Task<IActionResult> Setup(
         [FromBody] ApartmentSetupRequest request)
     {
-        if (!TryGetApartmentId(out var apartmentId))
-            return Unauthorized();
+        var admin = await GetCurrentAdminAsync();
+
+    if (admin == null)
+        return Unauthorized();
+
+    if (!admin.ApartmentId.HasValue)
+    {
+        return Conflict(new
+        {
+            message = "Önce apartman oluşturmalısınız."
+        });
+    }
+
+    var apartmentId = admin.ApartmentId.Value;
 
         if (request.Floors == null ||
             request.Floors.Count == 0 ||
@@ -171,12 +209,82 @@ public class ApartmentsController : ControllerBase
         });
     }
 
-    private bool TryGetApartmentId(out int apartmentId)
+    private async Task<User?> GetCurrentAdminAsync()
     {
-        return int.TryParse(
-            User.FindFirst("ApartmentId")?.Value,
-            out apartmentId);
+        var userIdValue = User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!int.TryParse(userIdValue, out var userId))
+            return null;
+
+        return await _context.Users
+            .FirstOrDefaultAsync(u =>
+                u.Id == userId && u.Role == "Admin");
     }
+
+    
+[HttpPost]
+public async Task<IActionResult> CreateApartment(
+    [FromBody] CreateApartmentRequest request)
+{
+    var userIdValue = User.FindFirst(
+        System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+    if (!int.TryParse(userIdValue, out var userId))
+        return Unauthorized();
+
+    var admin = await _context.Users
+        .FirstOrDefaultAsync(u => u.Id == userId && u.Role == "Admin");
+
+    if (admin == null)
+        return Unauthorized();
+
+    if (admin.ApartmentId.HasValue)
+    {
+        return Conflict(new
+        {
+            message = "Bu yönetici zaten bir apartmana bağlı."
+        });
+    }
+
+    var apartment = new Apartment
+    {
+        Name = request.Name.Trim(),
+        Address = request.Address.Trim(),
+        IsSetupComplete = false,
+        TotalFloors = 0,
+        TotalUnits = 0
+    };
+
+    await using var transaction =
+        await _context.Database.BeginTransactionAsync();
+
+    try
+    {
+        _context.Apartments.Add(apartment);
+        await _context.SaveChangesAsync();
+
+        admin.ApartmentId = apartment.Id;
+        await _context.SaveChangesAsync();
+
+        await transaction.CommitAsync();
+    }
+    catch
+    {
+        await transaction.RollbackAsync();
+        throw;
+    }
+
+    return Created("", new
+    {
+        message = "Apartman oluşturuldu.",
+        apartment.Id,
+        apartment.Name,
+        apartment.Address,
+        apartment.IsSetupComplete
+    });
+}
+
 }
 
 public class ApartmentSetupRequest

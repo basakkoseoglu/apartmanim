@@ -19,10 +19,12 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly PasswordHasher<User> _passwordHasher;
+    private readonly IWebHostEnvironment _environment;
 
-    public AuthController(AppDbContext context)
+    public AuthController(AppDbContext context, IWebHostEnvironment environment)
     {
         _context = context;
+        _environment = environment;
         _passwordHasher = new PasswordHasher<User>();
     }
 
@@ -126,7 +128,7 @@ public async Task<IActionResult> CreateResident(
     }
 }
 
-    [Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin")]
 [HttpGet("residents")]
 public async Task<IActionResult> GetResidents()
 {
@@ -157,6 +159,57 @@ public async Task<IActionResult> GetResidents()
         .ToListAsync();
 
     return Ok(residents);
+}
+
+
+[HttpPost("create-admin")]
+public async Task<IActionResult> CreateAdmin(
+    [FromBody] CreateAdminRequest request)
+{
+    // Bu işlem yalnızca geliştirme ortamında kullanılabilir.
+    if (!_environment.IsDevelopment())
+    {
+        return NotFound();
+    }
+
+    var email = request.Email.Trim().ToLowerInvariant();
+
+    var emailExists = await _context.Users
+        .AnyAsync(u => u.Email.ToLower() == email);
+
+    if (emailExists)
+    {
+        return Conflict(new
+        {
+            message = "Bu e-posta adresi zaten kayıtlı."
+        });
+    }
+
+    var admin = new User
+    {
+        FullName = request.FullName.Trim(),
+        Email = email,
+        Role = "Admin",
+        ApartmentId = null,
+        MustChangePassword = false
+    };
+
+    admin.PasswordHash = _passwordHasher.HashPassword(
+        admin,
+        request.Password);
+
+    _context.Users.Add(admin);
+    await _context.SaveChangesAsync();
+
+    return Created("", new
+    {
+        message = "Yönetici hesabı oluşturuldu.",
+        admin.Id,
+        admin.FullName,
+        admin.Email,
+        admin.Role,
+        admin.ApartmentId
+    });
 }
 
 [HttpPost("login")]
@@ -211,6 +264,33 @@ public async Task<IActionResult> Login(
         }
     });
 }
+
+
+[Authorize(Roles = "Admin")]
+[HttpPost("refresh-token")]
+public async Task<IActionResult> RefreshToken()
+{
+    var userIdValue = User.FindFirst(
+        ClaimTypes.NameIdentifier)?.Value;
+
+    if (!int.TryParse(userIdValue, out var userId))
+        return Unauthorized();
+
+    var user = await _context.Users
+        .FirstOrDefaultAsync(u => u.Id == userId && u.Role == "Admin");
+
+    if (user == null)
+        return Unauthorized();
+
+    var token = GenerateJwtToken(user, user.MustChangePassword);
+
+    return Ok(new
+    {
+        token,
+        apartmentId = user.ApartmentId
+    });
+}
+
 
 
 [Authorize]
@@ -306,6 +386,7 @@ public IActionResult Me()
         role = User.FindFirst(ClaimTypes.Role)?.Value
     });
 }
+
 [Authorize(Roles = "Admin")]
 [HttpGet("admin-test")]
 public IActionResult AdminTest()
@@ -336,11 +417,17 @@ private string GenerateJwtToken(
         new Claim(ClaimTypes.Name, user.FullName),
         new Claim(ClaimTypes.Email, user.Email),
         new Claim(ClaimTypes.Role, user.Role),
-        new Claim("ApartmentId", user.ApartmentId.ToString()),
         new Claim(
             "MustChangePassword",
             passwordChangeOnly.ToString().ToLowerInvariant())
     };
+    if (user.ApartmentId.HasValue)
+{
+    claims.Add(new Claim(
+        "ApartmentId",
+        user.ApartmentId.Value.ToString()));
+}
+
 
     if (passwordChangeOnly)
     {
@@ -385,6 +472,24 @@ public class CreateResidentRequest
 
     [Range(1, int.MaxValue)]
     public int UnitId { get; set; }
+}
+
+
+public class CreateAdminRequest
+{
+    [Required]
+    [StringLength(100, MinimumLength = 2)]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required]
+    [EmailAddress]
+    [StringLength(254)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(8)]
+    [StringLength(128)]
+    public string Password { get; set; } = string.Empty;
 }
 
 

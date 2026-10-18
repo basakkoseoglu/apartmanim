@@ -15,7 +15,7 @@ public class User
     
     public bool MustChangePassword { get; set; } = false;
 
-    public int ApartmentId { get; set; }
+    public int? ApartmentId { get; set; }
 
     public Apartment? Apartment { get; set; }
 

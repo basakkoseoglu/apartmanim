@@ -13,6 +13,9 @@ const API_URL = 'http://localhost:5285/api/Apartments';
 export function ApartmentSetupPage() {
   const navigate = useNavigate();
   const { refreshSetupStatus } = useAuth();
+  const [apartmentName, setApartmentName] = useState('');
+  const [apartmentAddress, setApartmentAddress] = useState('');
+  const [apartmentCreated, setApartmentCreated] = useState(false);
   const [floors, setFloors] = useState<FloorInput[]>([
     { floorNo: 1, unitCount: 4 },
     { floorNo: 2, unitCount: 4 },
@@ -52,6 +55,68 @@ export function ApartmentSetupPage() {
     (total, floor) => total + floor.unitCount,
     0,
   );
+
+  
+const handleCreateApartment = async (
+  event: FormEvent<HTMLFormElement>,
+) => {
+  event.preventDefault();
+  setError('');
+  setLoading(true);
+
+  try {
+    const token = localStorage.getItem('apartmanim_token');
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name: apartmentName,
+        address: apartmentAddress,
+      }),
+    });
+
+    const data = await response.json();
+
+    
+if (!response.ok) {
+  setError(data.message ?? 'Apartman oluşturulamadı.');
+  return;
+}
+
+// Apartman oluşturuldu. Güncel ApartmentId içeren token'ı al.
+const refreshResponse = await fetch(
+  'http://localhost:5285/api/Auth/refresh-token',
+  {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+const refreshData = await refreshResponse.json();
+
+    if (!refreshResponse.ok) {
+      setError(
+        'Apartman oluşturuldu ancak oturum yenilenemedi. Çıkış yapıp tekrar giriş yapmalısın.'
+      );
+      return;
+    }
+
+    localStorage.setItem('apartmanim_token', refreshData.token);
+    setApartmentCreated(true);
+
+  } catch {
+    setError('Sunucuya bağlanılamadı. API çalışıyor mu kontrol et.');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,94 +177,212 @@ export function ApartmentSetupPage() {
     }
   };
 
-  return (
-    <main className="setup-page">
-      <section className="setup-card">
-        <h1>Apartmanım</h1>
-        <h2>Apartman Kurulumu</h2>
-        <p>
-          Yönetimini yapacağın apartmanın kat ve daire bilgilerini belirle.
-          Daireler otomatik olarak oluşturulacaktır.
-        </p>
+  
+ 
+return (
+  <main className="setup-page">
+    <section className="setup-container">
+      <header className="setup-brand">
+        <div className="setup-brand-mark">A</div>
+        <div>
+          <h1>Apartmanım</h1>
+          <p>Dijital apartman yönetimi</p>
+        </div>
+      </header>
 
-        <form onSubmit={handleSubmit}>
-          <div className="setup-floor-list">
-            {floors.map((floor, index) => (
-              <div className="setup-floor-row" key={index}>
-                <label>
-                  Kat numarası
-                  <input
-                    type="number"
-                    min="1"
-                    value={floor.floorNo}
-                    onChange={(event) =>
-                      updateFloor(
-                        index,
-                        'floorNo',
-                        Number(event.target.value),
-                      )
-                    }
-                    required
-                  />
-                </label>
+      <div className="setup-progress">
+        <div
+          className={`setup-step ${!apartmentCreated ? 'active' : 'completed'}`}
+        >
+          <span>{apartmentCreated ? '✓' : '1'}</span>
+          <div>
+            <strong>Apartman bilgileri</strong>
+            <small>Ad ve adres</small>
+          </div>
+        </div>
 
-                <label>
-                  Daire sayısı
-                  <input
-                    type="number"
-                    min="1"
-                    max="200"
-                    value={floor.unitCount}
-                    onChange={(event) =>
-                      updateFloor(
-                        index,
-                        'unitCount',
-                        Number(event.target.value),
-                      )
-                    }
-                    required
-                  />
-                </label>
+        <div className={`setup-step ${apartmentCreated ? 'active' : ''}`}>
+          <span>2</span>
+          <div>
+            <strong>Kat ve daireler</strong>
+            <small>Daire planı</small>
+          </div>
+        </div>
+      </div>
 
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={() => removeFloor(index)}
-                  aria-label={`${floor.floorNo}. katı kaldır`}
-                >
-                  Kaldır
-                </button>
+      <section className="card setup-card">
+        <div className="setup-card-heading">
+          <span className="setup-eyebrow">İLK KURULUM</span>
+
+          <h2>
+            {apartmentCreated
+              ? 'Apartman planını oluştur'
+              : 'Apartmanını tanımla'}
+          </h2>
+
+          <p>
+            {apartmentCreated
+              ? 'Katları ve her kattaki daire sayısını belirle. Daireler otomatik oluşturulacaktır.'
+              : 'Apartman bilgilerini girerek dijital yönetim alanını oluşturmaya başla.'}
+          </p>
+        </div>
+
+        {!apartmentCreated ? (
+          <form className="setup-form" onSubmit={handleCreateApartment}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="apartmentName">
+                Apartman adı
+              </label>
+              <input
+                id="apartmentName"
+                className="form-input"
+                type="text"
+                placeholder="Örn. Güneş Apartmanı"
+                value={apartmentName}
+                onChange={(event) => setApartmentName(event.target.value)}
+                minLength={2}
+                maxLength={150}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="apartmentAddress">
+                Açık adres
+              </label>
+              <textarea
+                id="apartmentAddress"
+                className="form-textarea setup-address"
+                placeholder="Mahalle, cadde, sokak ve bina numarası"
+                value={apartmentAddress}
+                onChange={(event) => setApartmentAddress(event.target.value)}
+                minLength={5}
+                maxLength={300}
+                rows={3}
+                required
+              />
+              <span className="setup-hint">
+                Apartmanınızın adresini eksiksiz girin.
+              </span>
+            </div>
+
+            {error && (
+              <p className="form-error" role="alert">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg setup-submit"
+              disabled={loading}
+            >
+              {loading ? 'Apartman oluşturuluyor...' : 'Devam Et'}
+              {!loading && <span aria-hidden="true">→</span>}
+            </button>
+          </form>
+        ) : (
+          <form className="setup-form" onSubmit={handleSubmit}>
+            <div className="setup-floor-list">
+              {floors.map((floor, index) => (
+                <div className="setup-floor-row" key={index}>
+                  <div className="setup-floor-number">
+                    <span>Kat</span>
+                    <strong>{index + 1}</strong>
+                  </div>
+
+                  <div className="form-group setup-floor-field">
+                    <label
+                      className="form-label"
+                      htmlFor={`floor-${index}`}
+                    >
+                      Kat numarası
+                    </label>
+                    <input
+                      id={`floor-${index}`}
+                      className="form-input"
+                      type="number"
+                      min="1"
+                      value={floor.floorNo}
+                      onChange={(event) =>
+                        updateFloor(index, 'floorNo', Number(event.target.value))
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group setup-floor-field">
+                    <label
+                      className="form-label"
+                      htmlFor={`units-${index}`}
+                    >
+                      Daire sayısı
+                    </label>
+                    <input
+                      id={`units-${index}`}
+                      className="form-input"
+                      type="number"
+                      min="1"
+                      max="200"
+                      value={floor.unitCount}
+                      onChange={(event) =>
+                        updateFloor(index, 'unitCount', Number(event.target.value))
+                      }
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-ghost setup-remove"
+                    onClick={() => removeFloor(index)}
+                    aria-label={`${floor.floorNo}. katı kaldır`}
+                    title="Katı kaldır"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-outline setup-add-floor"
+              onClick={addFloor}
+              disabled={floors.length >= 100}
+            >
+              <span>+</span> Kat Ekle
+            </button>
+
+            <div className="setup-total">
+              <div>
+                <span>Toplam kat</span>
+                <strong>{floors.length}</strong>
               </div>
-            ))}
-          </div>
+              <div>
+                <span>Toplam daire</span>
+                <strong>{totalUnits}</strong>
+              </div>
+            </div>
 
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={addFloor}
-            disabled={floors.length >= 100}
-          >
-            + Kat Ekle
-          </button>
+            {error && (
+              <p className="form-error" role="alert">{error}</p>
+            )}
 
-          <div className="setup-total">
-            <span>Toplam kat</span>
-            <strong>{floors.length}</strong>
-            <span>Toplam daire</span>
-            <strong>{totalUnits}</strong>
-          </div>
-
-          {error && <p className="form-error">{error}</p>}
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading}
-          >
-            {loading ? 'Kurulum yapılıyor...' : 'Kurulumu Tamamla'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg setup-submit"
+              disabled={loading}
+            >
+              {loading ? 'Kurulum yapılıyor...' : 'Kurulumu Tamamla'}
+              {!loading && <span aria-hidden="true">→</span>}
+            </button>
+          </form>
+        )}
       </section>
-    </main>
-  );
+
+      <p className="setup-footer">
+        Apartmanım <span>·</span> Apartman yönetimini kolaylaştırır
+      </p>
+    </section>
+  </main>
+);
 }

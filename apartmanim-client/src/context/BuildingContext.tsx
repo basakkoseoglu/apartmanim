@@ -56,6 +56,7 @@ interface BuildingContextType {
   temporaryPassword: string,
 ) => Promise<string | null>;
   removeResident: (residentId: number) => Promise<string | null>;
+  
 }
 
 const API_URL = 'http://localhost:5285/api';

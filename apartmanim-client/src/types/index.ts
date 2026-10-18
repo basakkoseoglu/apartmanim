@@ -11,7 +11,7 @@ export interface User {
   role: UserRole;
   unitId?: number;      // Sakin ise daire ID'si
   unitNumber?: string;  // Sakin ise daire numarası
-  apartmentId: number;
+  apartmentId: number | null;
 }
 
 // ============================================

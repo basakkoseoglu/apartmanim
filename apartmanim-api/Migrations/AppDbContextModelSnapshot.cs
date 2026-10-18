@@ -213,7 +213,7 @@ namespace apartmanim_api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ApartmentId")
+                    b.Property<int?>("ApartmentId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Email")
@@ -325,8 +325,7 @@ namespace apartmanim_api.Migrations
                     b.HasOne("apartmanim_api.Models.Apartment", "Apartment")
                         .WithMany()
                         .HasForeignKey("ApartmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Apartment");
                 });
