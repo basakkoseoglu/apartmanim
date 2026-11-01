@@ -136,8 +136,8 @@
 ## 📸 Uygulama Ekran Görüntüleri
 
 <p align="center">
-  <img src="screenshots/create.png" width="220"/>
   <img src="screenshots/login.png" width="220"/>
+  <img src="screenshots/create.png" width="220"/>
   <img src="screenshots/dashboard.png" width="220"/>
   <img src="screenshots/announcements.png" width="220"/>
 </p>
