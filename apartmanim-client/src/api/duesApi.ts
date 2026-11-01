@@ -72,6 +72,7 @@ function mapDue(item: ApiDue): Due {
     id: item.id,
     unitId: item.unitId,
     unitNumber: item.unitNo ?? '',
+    floorNo: item.floorNo, // EKLENDİ
     residentName: item.residentName ?? 'Sakin bilgisi yok',
     amount: item.amount,
     dueDate: item.dueDate,
@@ -118,5 +119,11 @@ export async function createDue(data: {
 export async function markDueAsPaid(id: number) {
   return request<ApiDue>(`/${id}/pay`, {
     method: 'PUT',
+  });
+}
+
+export async function deleteDue(id: number) {
+  return request<{ message: string }>(`/${id}`, {
+    method: 'DELETE',
   });
 }

@@ -7,7 +7,6 @@ import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../context/AuthContext';
 import {
   getAllMaintenanceRequests,
-  getMyMaintenanceRequests,
   createMaintenanceRequest,
   updateMaintenanceRequestStatus,
 } from '../api/maintenanceApi';
@@ -59,9 +58,7 @@ export function MaintenancePage() {
       setError('');
 
       try {
-        const data = isAdmin
-          ? await getAllMaintenanceRequests()
-          : await getMyMaintenanceRequests();
+        const data = await getAllMaintenanceRequests();
 
         if (!cancelled) {
           setRequests(data);

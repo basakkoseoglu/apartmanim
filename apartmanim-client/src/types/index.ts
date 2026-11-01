@@ -43,7 +43,8 @@ export interface Due {
   dueDate: string;       // Son ödeme tarihi
   paidDate?: string;     // Ödeme tarihi
   status: DueStatus;
-  month: string;         // Örn: "2024-10"
+  month: string;    
+  floorNo?: number;     // Örn: "2024-10"
 }
 
 // ============================================

@@ -100,6 +100,11 @@ public async Task<IActionResult> GetMyDues()
         {
             d.Id,
             d.UnitId,
+            FloorNo = d.Unit!.FloorNo,
+            UnitNo = d.Unit.UnitNo,
+            ResidentName = d.Unit.Resident != null
+                ? d.Unit.Resident.FullName
+                : null,
             d.Amount,
             d.DueDate,
             d.PaidDate,
@@ -152,6 +157,37 @@ var due = await _context.Dues
     });
 }
 
+[HttpDelete("{id}")]
+[Authorize(Roles = "Admin")]
+public async Task<IActionResult> DeleteDue(int id)
+{
+    var apartmentIdValue = User.FindFirst("ApartmentId")?.Value;
+
+    if (!int.TryParse(apartmentIdValue, out var apartmentId))
+        return Unauthorized();
+
+    var due = await _context.Dues
+        .FirstOrDefaultAsync(d =>
+            d.Id == id &&
+            d.Unit != null &&
+            d.Unit.ApartmentId == apartmentId);
+
+    if (due == null)
+    {
+        return NotFound(new
+        {
+            message = "Aidat bulunamadı."
+        });
+    }
+
+    _context.Dues.Remove(due);
+    await _context.SaveChangesAsync();
+
+    return Ok(new
+    {
+        message = "Aidat başarıyla silindi."
+    });
+}
 
 [HttpGet]
 [Authorize(Roles = "Admin")]

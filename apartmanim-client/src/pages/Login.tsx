@@ -7,8 +7,6 @@ import { useEffect } from "react";
 
 export function LoginPage() {
   useEffect(() => {
-  console.log("LoginPage MOUNT");
-  return () => console.log("LoginPage UNMOUNT");
 }, []);
   const { login, completePasswordChange } = useAuth();
   const navigate = useNavigate();
@@ -34,14 +32,9 @@ export function LoginPage() {
     setIsLoading(false);
 
     if (result.success) {
-      console.log(
-    'LoginPage mustChangePassword:',
-    result.mustChangePassword
-  );
       if (result.mustChangePassword) {
         setTemporaryPassword(data.password);
         setShowPasswordModal(true);
-        console.log('Şifre modalı açılmak üzere');
         return;
       }
 
@@ -218,7 +211,7 @@ export function LoginPage() {
 
       {showPasswordModal && (
         <>
-    {console.log('Modal render ediliyor')}
+    {}
         <div
           style={{
             position: "fixed",

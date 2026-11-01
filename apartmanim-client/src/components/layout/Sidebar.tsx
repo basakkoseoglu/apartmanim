@@ -1,14 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-// İkon bileşeni (emoji tabanlı, ikon kütüphanesi gerektirmez)
-// const icons: Record<string, string> = {
-//   dashboard:     '🏠',
-//   announcements: '📢',
-//   dues:          '💰',
-//   maintenance:   '🔧',
-// };
-
 export function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -39,25 +31,21 @@ export function Sidebar() {
       <ul className="sidebar-nav">
         <li>
           <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : ''}>
-            {/* <span className="nav-icon">{icons.dashboard}</span> */}
             Genel Bakış
           </NavLink>
         </li>
         <li>
           <NavLink to="/announcements" className={({ isActive }) => isActive ? 'active' : ''}>
-            {/* <span className="nav-icon">{icons.announcements}</span> */}
             Duyurular
           </NavLink>
         </li>
         <li>
           <NavLink to="/dues" className={({ isActive }) => isActive ? 'active' : ''}>
-            {/* <span className="nav-icon">{icons.dues}</span> */}
             Aidatlar
           </NavLink>
         </li>
         <li>
           <NavLink to="/maintenance" className={({ isActive }) => isActive ? 'active' : ''}>
-            {/* <span className="nav-icon">{icons.maintenance}</span> */}
             Arıza ve Bakım
           </NavLink>
           {user?.role === 'admin' && (
@@ -81,7 +69,7 @@ export function Sidebar() {
             onClick={handleLogout}
             title="Çıkış Yap"
           >
-            ⎋
+            ⏻
           </button>
         </div>
       </div>

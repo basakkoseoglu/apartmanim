@@ -4,6 +4,7 @@ using apartmanim_api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace apartmanim_api.Controllers;
 
@@ -183,6 +184,70 @@ public async Task<IActionResult> AssignResident(
         unit.UnitNo,
         unit.ResidentId,
         ResidentName = user.FullName
+    });
+}
+
+[HttpPut("{id}/assign-admin")]
+public async Task<IActionResult> AssignAdmin(int id)
+{
+    // Giriş yapan adminin bilgilerini JWT üzerinden al.
+    var adminIdValue = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    var apartmentIdValue = User.FindFirst("ApartmentId")?.Value;
+
+    if (!int.TryParse(adminIdValue, out var adminId) ||
+        !int.TryParse(apartmentIdValue, out var apartmentId))
+    {
+        return Unauthorized(new { message = "Kullanıcı veya apartman bilgisi bulunamadı." });
+    }
+
+    // Kullanıcının gerçekten bu apartmanın yöneticisi olduğunu doğrula.
+    var admin = await _context.Users.FirstOrDefaultAsync(u =>
+        u.Id == adminId &&
+        u.Role == "Admin" &&
+        u.ApartmentId == apartmentId
+    );
+
+    if (admin == null)
+    {
+        return Forbid();
+    }
+
+    // Seçilen dairenin aynı apartmana ait olduğunu doğrula.
+    var unit = await _context.Units.FirstOrDefaultAsync(u =>
+        u.Id == id &&
+        u.ApartmentId == apartmentId
+    );
+
+    if (unit == null)
+    {
+        return NotFound(new { message = "Daire bulunamadı." });
+    }
+
+    // Daire başka bir kullanıcıya atanmış mı?
+    if (unit.ResidentId != null && unit.ResidentId != adminId)
+    {
+        return BadRequest(new { message = "Bu daire başka bir kullanıcıya atanmış." });
+    }
+
+    // Admin daha önce başka bir daireye atanmış mı?
+    var existingUnit = await _context.Units.FirstOrDefaultAsync(u =>
+        u.ResidentId == adminId &&
+        u.Id != id
+    );
+
+    if (existingUnit != null)
+    {
+        return BadRequest(new { message = "Yönetici zaten başka bir daireye atanmış." });
+    }
+
+    // Admini seçilen daireye ata.
+    unit.ResidentId = adminId;
+
+    await _context.SaveChangesAsync();
+
+    return Ok(new
+    {
+        message = "Yönetici daireye başarıyla atandı."
     });
 }
 

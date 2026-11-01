@@ -119,7 +119,7 @@ public async Task<IActionResult> GetMyRequests()
 
     
 [HttpGet]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,Resident")]
 public async Task<IActionResult> GetAllRequests(
     [FromQuery] string? status)
 {

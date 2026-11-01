@@ -34,39 +34,59 @@ export function ResidentsPage() {
   );
 
   const filteredResidents = useMemo(() => {
-    return residents.filter((resident) => {
-      const matchesSearch =
-        resident.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        resident.email.toLowerCase().includes(search.toLowerCase());
+    return residents
+      .filter((resident) => {
+        const matchesSearch =
+          resident.fullName.toLowerCase().includes(search.toLowerCase()) ||
+          resident.email.toLowerCase().includes(search.toLowerCase());
 
-      const matchesFloor =
-        selectedFloor === "all" || resident.floorNo === Number(selectedFloor);
+        const matchesFloor =
+          selectedFloor === "all" || resident.floorNo === Number(selectedFloor);
 
-      return matchesSearch && matchesFloor;
-    });
+        return matchesSearch && matchesFloor;
+      })
+      .sort((a, b) => {
+        const floorComparison = a.floorNo - b.floorNo;
+
+        if (floorComparison !== 0) {
+          return floorComparison;
+        }
+
+        return Number(a.unitNo) - Number(b.unitNo);
+      });
   }, [residents, search, selectedFloor]);
 
   const filteredUnits = useMemo(() => {
-    return units.filter((unit) => {
-      const matchesFloor =
-        selectedFloor === "all" || unit.floorNo === Number(selectedFloor);
+    return units
+      .filter((unit) => {
+        const matchesFloor =
+          selectedFloor === "all" || unit.floorNo === Number(selectedFloor);
 
-      const matchesOccupancy =
-        occupancyFilter === "all" ||
-        (occupancyFilter === "occupied" && unit.residentId !== null) ||
-        (occupancyFilter === "vacant" && unit.residentId === null);
+        const matchesOccupancy =
+          occupancyFilter === "all" ||
+          (occupancyFilter === "occupied" && unit.residentId !== null) ||
+          (occupancyFilter === "vacant" && unit.residentId === null);
 
-      const resident = residents.find((item) => item.id === unit.residentId);
+        const resident = residents.find((item) => item.id === unit.residentId);
 
-      const matchesSearch =
-        !search ||
-        `daire ${unit.unitNo}`.includes(search.toLowerCase()) ||
-        `kat ${unit.floorNo}`.includes(search.toLowerCase()) ||
-        (resident?.fullName.toLowerCase().includes(search.toLowerCase()) ??
-          false);
+        const matchesSearch =
+          !search ||
+          `daire ${unit.unitNo}`.includes(search.toLowerCase()) ||
+          `kat ${unit.floorNo}`.includes(search.toLowerCase()) ||
+          (resident?.fullName.toLowerCase().includes(search.toLowerCase()) ??
+            false);
 
-      return matchesFloor && matchesOccupancy && matchesSearch;
-    });
+        return matchesFloor && matchesOccupancy && matchesSearch;
+      })
+      .sort((a, b) => {
+        const floorComparison = a.floorNo - b.floorNo;
+
+        if (floorComparison !== 0) {
+          return floorComparison;
+        }
+
+        return Number(a.unitNo) - Number(b.unitNo);
+      });
   }, [units, residents, selectedFloor, occupancyFilter, search]);
 
   const openAddModal = () => {
@@ -186,7 +206,7 @@ export function ResidentsPage() {
           <p>Henüz kat eklenmemiş.</p>
         ) : (
           <div className="resident-floor-grid">
-            {floors.map((floorNo) => {
+           {[...floors].sort((a, b) => a - b).map((floorNo) => {
               const floorUnits = units.filter(
                 (unit) => unit.floorNo === floorNo,
               );
@@ -274,7 +294,7 @@ export function ResidentsPage() {
           onChange={(event) => setSelectedFloor(event.target.value)}
         >
           <option value="all">Tüm Katlar</option>
-          {floors.map((floorNo) => (
+         {[...floors].sort((a, b) => a - b).map((floorNo) => (
             <option key={floorNo} value={floorNo}>
               {floorNo}. Kat
             </option>

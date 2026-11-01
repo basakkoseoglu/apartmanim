@@ -1,16 +1,16 @@
-
-import { useEffect, useState } from 'react';
-import { Layout } from '../components/layout/Layout';
-import { DueBadge } from '../components/ui/Badge';
-import { Modal } from '../components/ui/Modal';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from "react";
+import { Layout } from "../components/layout/Layout";
+import { DueBadge } from "../components/ui/Badge";
+import { Modal } from "../components/ui/Modal";
+import { useAuth } from "../context/AuthContext";
 import {
   getAllDues,
   getMyDues,
   createDue,
   markDueAsPaid,
-} from '../api/duesApi';
-import type { Due } from '../types';
+  deleteDue,
+} from "../api/duesApi";
+import type { Due } from "../types";
 
 interface Unit {
   id: number;
@@ -19,48 +19,45 @@ interface Unit {
   residentName?: string | null;
 }
 
-type DueScope = 'single' | 'all';
+type DueScope = "single" | "all" | "occupied";
 
-const API_URL = 'http://localhost:5285/api';
+const API_URL = "http://localhost:5285/api";
 
 export function DuesPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === "admin";
 
   const [dues, setDues] = useState<Due[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const occupiedUnits = units.filter((unit) => unit.residentName?.trim());
   const [statusModal, setStatusModal] = useState<Due | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [unitsLoading, setUnitsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const [scope, setScope] = useState<DueScope>('all');
-  const [selectedUnitId, setSelectedUnitId] = useState('');
-  const [amount, setAmount] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [scope, setScope] = useState<DueScope>("all");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [dueDate, setDueDate] = useState("");
+
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadDues = async () => {
     if (!user) return;
 
     const currentUser = user;
 
-    const data = isAdmin
-      ? await getAllDues()
-      : await getMyDues();
+    const data = isAdmin ? await getAllDues() : await getMyDues();
 
     setDues(
       data.map((due) => ({
         ...due,
-        unitNumber:
-          due.unitNumber || currentUser.unitNumber || '—',
-        residentName:
-          due.residentName === 'Sakin bilgisi yok'
-            ? currentUser.name
-            : due.residentName || currentUser.name,
+        unitNumber: due.unitNumber || currentUser.unitNumber || "—",
+        residentName: due.residentName || "Boş Daire",
       })),
     );
   };
@@ -75,41 +72,36 @@ export function DuesPage() {
     let active = true;
 
     async function load() {
-  if (!user) return;
+      if (!user) return;
 
-  const currentUser = user;
-  setLoading(true);
-  setError('');
+      const currentUser = user;
+      setLoading(true);
+      setError("");
 
-  try {
-    const data = isAdmin
-      ? await getAllDues()
-      : await getMyDues();
+      try {
+        const data = isAdmin ? await getAllDues() : await getMyDues();
 
-    if (active) {
-      setDues(
-        data.map((due) => ({
-          ...due,
-          unitNumber: due.unitNumber || currentUser.unitNumber || '—',
-          residentName:
-            due.residentName === 'Sakin bilgisi yok'
-              ? currentUser.name
-              : due.residentName || currentUser.name,
-        })),
-      );
+        if (active) {
+          setDues(
+            data.map((due) => ({
+              ...due,
+              unitNumber: due.unitNumber || currentUser.unitNumber || "—",
+              residentName: due.residentName || "Boş Daire",
+            })),
+          );
+        }
+      } catch (err) {
+        if (active) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Aidatlar yüklenirken bir hata oluştu.",
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-  } catch (err) {
-    if (active) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Aidatlar yüklenirken bir hata oluştu.',
-      );
-    }
-  } finally {
-    if (active) setLoading(false);
-  }
-}
 
     void load();
 
@@ -119,34 +111,34 @@ export function DuesPage() {
   }, [user, isAdmin]);
 
   const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+    new Date(date).toLocaleDateString("tr-TR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
 
   const formatAmount = (value: number) =>
-    new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY',
+    new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
     }).format(value);
 
   const openAddModal = async () => {
-    setError('');
-    setNotice('');
-    setScope('all');
-    setSelectedUnitId('');
-    setAmount('');
-    setDueDate('');
+    setError("");
+    setNotice("");
+    setScope("all");
+    setSelectedUnitId("");
+    setAmount("");
+    setDueDate("");
     setIsAddOpen(true);
 
     setUnitsLoading(true);
 
     try {
-      const token = localStorage.getItem('apartmanim_token');
+      const token = localStorage.getItem("apartmanim_token");
 
       if (!token) {
-        throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yap.');
+        throw new Error("Oturum bulunamadı. Lütfen tekrar giriş yap.");
       }
 
       const response = await fetch(`${API_URL}/units`, {
@@ -156,7 +148,7 @@ export function DuesPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Daire listesi yüklenemedi.');
+        throw new Error("Daire listesi yüklenemedi.");
       }
 
       const data: Unit[] = await response.json();
@@ -167,9 +159,7 @@ export function DuesPage() {
       }
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Daire listesi yüklenemedi.',
+        err instanceof Error ? err.message : "Daire listesi yüklenemedi.",
       );
     } finally {
       setUnitsLoading(false);
@@ -184,35 +174,35 @@ export function DuesPage() {
   const onAddSubmit = async () => {
     if (saving) return;
 
-    setError('');
-    setNotice('');
+    setError("");
+    setNotice("");
 
     const numericAmount = Number(amount);
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setError('Geçerli ve sıfırdan büyük bir aidat tutarı gir.');
+      setError("Geçerli ve sıfırdan büyük bir aidat tutarı gir.");
       return;
     }
 
     if (!dueDate) {
-      setError('Son ödeme tarihini seç.');
+      setError("Son ödeme tarihini seç.");
       return;
     }
 
-    if (scope === 'single' && !selectedUnitId) {
-      setError('Lütfen bir daire seç.');
+    if (scope === "single" && !selectedUnitId) {
+      setError("Lütfen bir daire seç.");
       return;
     }
 
     const targetUnits =
-      scope === 'all'
+      scope === "all"
         ? units
-        : units.filter(
-            (unit) => unit.id === Number(selectedUnitId),
-          );
+        : scope === "occupied"
+          ? occupiedUnits
+          : units.filter((unit) => unit.id === Number(selectedUnitId));
 
     if (targetUnits.length === 0) {
-      setError('Aidat oluşturulacak daire bulunamadı.');
+      setError("Aidat oluşturulacak daire bulunamadı.");
       return;
     }
 
@@ -220,25 +210,17 @@ export function DuesPage() {
     const targetMonth = dueDate.slice(0, 7);
 
     const alreadyExists = targetUnits.filter((unit) =>
-      dues.some(
-        (due) =>
-          due.unitId === unit.id &&
-          due.month === targetMonth,
-      ),
+      dues.some((due) => due.unitId === unit.id && due.month === targetMonth),
     );
 
-    const existingIds = new Set(
-      alreadyExists.map((unit) => unit.id),
-    );
+    const existingIds = new Set(alreadyExists.map((unit) => unit.id));
 
     const unitsToCreate = targetUnits.filter(
       (unit) => !existingIds.has(unit.id),
     );
 
     if (unitsToCreate.length === 0) {
-      setError(
-        'Seçilen daire(ler) için bu ayın aidatı zaten mevcut.',
-      );
+      setError("Seçilen daire(ler) için bu ayın aidatı zaten mevcut.");
       return;
     }
 
@@ -256,7 +238,7 @@ export function DuesPage() {
       );
 
       const successCount = results.filter(
-        (result) => result.status === 'fulfilled',
+        (result) => result.status === "fulfilled",
       ).length;
 
       const failedCount = results.length - successCount;
@@ -275,7 +257,7 @@ export function DuesPage() {
           `${successCount} aidat başarıyla oluşturuldu.` +
             (skippedCount > 0
               ? ` ${skippedCount} dairede aynı ay için kayıt bulunduğundan atlandı.`
-              : ''),
+              : ""),
         );
 
         setIsAddOpen(false);
@@ -284,7 +266,7 @@ export function DuesPage() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Aidatlar oluşturulurken bir hata oluştu.',
+          : "Aidatlar oluşturulurken bir hata oluştu.",
       );
     } finally {
       setSaving(false);
@@ -292,20 +274,20 @@ export function DuesPage() {
   };
 
   const openStatusModal = (due: Due) => {
-    setError('');
+    setError("");
     setStatusModal(due);
   };
 
   const applyStatus = async () => {
     if (!statusModal || saving) return;
 
-    if (statusModal.status === 'paid') {
+    if (statusModal.status === "paid") {
       setStatusModal(null);
       return;
     }
 
     setSaving(true);
-    setError('');
+    setError("");
 
     try {
       const updatedDue = await markDueAsPaid(statusModal.id);
@@ -315,9 +297,8 @@ export function DuesPage() {
           due.id === statusModal.id
             ? {
                 ...due,
-                status: 'paid',
-                paidDate:
-                  updatedDue.paidDate ?? new Date().toISOString(),
+                status: "paid",
+                paidDate: updatedDue.paidDate ?? new Date().toISOString(),
               }
             : due,
         ),
@@ -326,19 +307,60 @@ export function DuesPage() {
       setStatusModal(null);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : 'Aidat durumu güncellenemedi.',
+        err instanceof Error ? err.message : "Aidat durumu güncellenemedi.",
       );
     } finally {
       setSaving(false);
     }
   };
 
+  const handleDeleteDue = async (due: Due) => {
+    if (saving || deletingId !== null) return;
+
+    const confirmed = window.confirm(
+      `${due.unitNumber} numaralı dairenin ${formatAmount(due.amount)} tutarındaki aidatını silmek istediğine emin misin?`,
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(due.id);
+    setError("");
+    setNotice("");
+
+    try {
+      await deleteDue(due.id);
+
+      setDues((prev) => prev.filter((item) => item.id !== due.id));
+
+      setNotice("Aidat başarıyla silindi.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Aidat silinirken bir hata oluştu.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+
+  const sortedDues = [...dues].sort((a, b) => {
+  const floorComparison = (a.floorNo ?? 0) - (b.floorNo ?? 0);
+
+  if (floorComparison !== 0) {
+    return floorComparison;
+  }
+
+  return (
+    Number(a.unitNumber) - Number(b.unitNumber)
+  );
+});
+
   const total = dues.length;
-  const paid = dues.filter((due) => due.status === 'paid').length;
-  const pending = dues.filter((due) => due.status === 'pending').length;
-  const overdue = dues.filter((due) => due.status === 'overdue').length;
+  const paid = dues.filter((due) => due.status === "paid").length;
+  const pending = dues.filter((due) => due.status === "pending").length;
+  const overdue = dues.filter((due) => due.status === "overdue").length;
 
   return (
     <Layout
@@ -366,7 +388,7 @@ export function DuesPage() {
           className="card mb-8"
           role="alert"
           style={{
-            color: 'var(--color-danger, #dc2626)',
+            color: "var(--color-danger, #dc2626)",
           }}
         >
           <div className="card-body">{error}</div>
@@ -378,7 +400,7 @@ export function DuesPage() {
           className="card mb-8"
           role="status"
           style={{
-            color: 'var(--color-success, #15803d)',
+            color: "var(--color-success, #15803d)",
           }}
         >
           <div className="card-body">{notice}</div>
@@ -426,8 +448,8 @@ export function DuesPage() {
           <span className="card-title">💰 Aidat Listesi</span>
           <span
             style={{
-              fontSize: 'var(--font-size-sm)',
-              color: 'var(--color-text-muted)',
+              fontSize: "var(--font-size-sm)",
+              color: "var(--color-text-muted)",
             }}
           >
             {dues.length} kayıt
@@ -451,9 +473,7 @@ export function DuesPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6}>
-                    Aidatlar yükleniyor...
-                  </td>
+                  <td colSpan={isAdmin ? 7 : 6}>Aidatlar yükleniyor...</td>
                 </tr>
               ) : dues.length === 0 ? (
                 <tr>
@@ -462,16 +482,18 @@ export function DuesPage() {
                   </td>
                 </tr>
               ) : (
-                dues.map((due) => (
+                sortedDues.map((due) => (
                   <tr key={due.id}>
                     <td style={{ fontWeight: 600 }}>
-                      {due.unitNumber}
+                      {due.floorNo !== undefined
+                        ? `${due.floorNo}. Kat - Daire ${due.unitNumber}`
+                        : `Daire ${due.unitNumber}`}
                     </td>
                     <td>{due.residentName}</td>
                     <td
                       style={{
                         fontWeight: 600,
-                        color: 'var(--color-primary)',
+                        color: "var(--color-primary)",
                       }}
                     >
                       {formatAmount(due.amount)}
@@ -483,7 +505,7 @@ export function DuesPage() {
                       ) : (
                         <span
                           style={{
-                            color: 'var(--color-text-light)',
+                            color: "var(--color-text-light)",
                           }}
                         >
                           —
@@ -496,15 +518,29 @@ export function DuesPage() {
 
                     {isAdmin && (
                       <td>
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => openStatusModal(due)}
-                          disabled={due.status === 'paid'}
-                        >
-                          {due.status === 'paid'
-                            ? 'Ödendi'
-                            : 'Güncelle'}
-                        </button>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => openStatusModal(due)}
+                            disabled={
+                              due.status === "paid" || deletingId !== null
+                            }
+                          >
+                            {due.status === "paid" ? "Ödendi" : "Güncelle"}
+                          </button>
+
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => void handleDeleteDue(due)}
+                            disabled={deletingId !== null}
+                            style={{
+                              color: "#dc2626",
+                              borderColor: "#dc2626",
+                            }}
+                          >
+                            {deletingId === due.id ? "Siliniyor..." : "Sil"}
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -535,16 +571,16 @@ export function DuesPage() {
               disabled={saving || unitsLoading}
               onClick={() => void onAddSubmit()}
             >
-              {saving ? 'Oluşturuluyor...' : 'Aidat Oluştur'}
+              {saving ? "Oluşturuluyor..." : "Aidat Oluştur"}
             </button>
           </>
         }
       >
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-4)',
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-4)",
           }}
         >
           <div className="form-group">
@@ -552,25 +588,24 @@ export function DuesPage() {
             <select
               className="form-select"
               value={scope}
-              onChange={(e) =>
-                setScope(e.target.value as DueScope)
-              }
+              onChange={(e) => setScope(e.target.value as DueScope)}
               disabled={saving}
             >
-              <option value="all">Tüm daireler</option>
+              <option value="all">Tüm daireler ({units.length})</option>
+              <option value="occupied">
+                Dolu daireler ({occupiedUnits.length})
+              </option>
               <option value="single">Tek bir daire</option>
             </select>
           </div>
 
-          {scope === 'single' && (
+          {scope === "single" && (
             <div className="form-group">
               <label className="form-label">Daire Seç</label>
               <select
                 className="form-select"
                 value={selectedUnitId}
-                onChange={(e) =>
-                  setSelectedUnitId(e.target.value)
-                }
+                onChange={(e) => setSelectedUnitId(e.target.value)}
                 disabled={saving || unitsLoading}
               >
                 {units.length === 0 && (
@@ -579,22 +614,17 @@ export function DuesPage() {
 
                 {units.map((unit) => (
                   <option key={unit.id} value={unit.id}>
-                    {unit.unitNo}
                     {unit.floorNo !== undefined
-                      ? ` — ${unit.floorNo}. Kat`
-                      : ''}
-                    {unit.residentName
-                      ? ` — ${unit.residentName}`
-                      : ''}
+                      ? `${unit.floorNo}. Kat - Daire ${unit.unitNo}`
+                      : `Daire ${unit.unitNo}`}
+                    {unit.residentName ? ` (${unit.residentName})` : ""}
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          {unitsLoading && (
-            <p>Daireler yükleniyor...</p>
-          )}
+          {unitsLoading && <p>Daireler yükleniyor...</p>}
 
           {!unitsLoading && units.length === 0 && (
             <p>Bu apartmanda daire bulunamadı.</p>
@@ -625,15 +655,14 @@ export function DuesPage() {
             />
           </div>
 
-          {scope === 'all' && units.length > 0 && (
+          {scope === "all" && units.length > 0 && (
             <p
               style={{
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-text-muted)',
+                fontSize: "var(--font-size-sm)",
+                color: "var(--color-text-muted)",
               }}
             >
-              Aynı ay için aidatı zaten bulunan daireler tekrar
-              eklenmeyecek.
+              Aynı ay için aidatı zaten bulunan daireler tekrar eklenmeyecek.
             </p>
           )}
         </div>
@@ -642,7 +671,7 @@ export function DuesPage() {
       {/* Aidat Ödemesi Modalı */}
       <Modal
         isOpen={statusModal !== null}
-        title={`Aidat Ödemesi — ${statusModal?.unitNumber ?? ''}`}
+        title={`Aidat Ödemesi — ${statusModal?.unitNumber ?? ""}`}
         onClose={() => {
           if (!saving) setStatusModal(null);
         }}
@@ -659,18 +688,16 @@ export function DuesPage() {
             <button
               className="btn btn-primary"
               onClick={() => void applyStatus()}
-              disabled={saving || statusModal?.status === 'paid'}
+              disabled={saving || statusModal?.status === "paid"}
             >
-              {saving
-                ? 'Kaydediliyor...'
-                : 'Ödendi olarak işaretle'}
+              {saving ? "Kaydediliyor..." : "Ödendi olarak işaretle"}
             </button>
           </>
         }
       >
         <p>
-          Bu aidatın ödemesinin alındığını onaylıyor musun?
-          Onayladığında ödeme durumu veritabanında güncellenecek.
+          Bu aidatın ödemesinin alındığını onaylıyor musun? Onayladığında ödeme
+          durumu veritabanında güncellenecek.
         </p>
       </Modal>
     </Layout>

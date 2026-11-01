@@ -138,8 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const result = data as ApiLoginResponse;
-      console.log('Login API sonucu:', result);
-console.log('Şifre değiştirme gerekli mi:', result.mustChangePassword);
 
       const loggedInUser: User = {
         id: result.user.id,

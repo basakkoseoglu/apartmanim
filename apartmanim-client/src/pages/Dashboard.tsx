@@ -1,23 +1,19 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Layout } from "../components/layout/Layout";
+import { DueBadge, MaintenanceBadge } from "../components/ui/Badge";
+import { useAuth } from "../context/AuthContext";
 
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Layout } from '../components/layout/Layout';
-import { DueBadge, MaintenanceBadge } from '../components/ui/Badge';
-import { useAuth } from '../context/AuthContext';
+import type { Due } from "../types";
 
-import type { Due } from '../types';
+import { getMyDues, getDuesSummary } from "../api/duesApi";
 
-import {
-  getMyDues,
-  getDuesSummary,
-} from '../api/duesApi';
-
-import { getAnnouncements } from '../api/announcementsApi';
+import { getAnnouncements } from "../api/announcementsApi";
 
 import {
   getAllMaintenanceRequests,
   getMyMaintenanceRequests,
-} from '../api/maintenanceApi';
+} from "../api/maintenanceApi";
 
 // ============================================
 // İSTATİSTİK KARTI
@@ -27,7 +23,7 @@ interface StatCardProps {
   icon: string;
   value: number | string;
   label: string;
-  variant: 'primary' | 'success' | 'warning' | 'error' | 'accent';
+  variant: "primary" | "success" | "warning" | "error" | "accent";
 }
 
 function StatCard({ icon, value, label, variant }: StatCardProps) {
@@ -47,13 +43,13 @@ function StatCard({ icon, value, label, variant }: StatCardProps) {
 // ============================================
 
 async function getUnitCount(): Promise<number> {
-  const token = localStorage.getItem('apartmanim_token');
+  const token = localStorage.getItem("apartmanim_token");
 
   if (!token) {
-    throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yap.');
+    throw new Error("Oturum bulunamadı. Lütfen tekrar giriş yap.");
   }
 
-  const response = await fetch('http://localhost:5285/api/units', {
+  const response = await fetch("http://localhost:5285/api/units", {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -73,10 +69,14 @@ async function getUnitCount(): Promise<number> {
 
 export function DashboardPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  const isResident = user?.role === 'resident';
+  const isAdmin = user?.role === "admin";
+  const isResident = user?.role === "resident";
 
   const [totalUnits, setTotalUnits] = useState(0);
+  const [totalAnnouncements, setTotalAnnouncements] = useState(0);
+  const [totalDues, setTotalDues] = useState(0);
+  const [totalMaintenanceRequests, setTotalMaintenanceRequests] = useState(0);
+
   const [paidDues, setPaidDues] = useState(0);
   const [pendingDues, setPendingDues] = useState(0);
   const [overdueDues, setOverdueDues] = useState(0);
@@ -91,34 +91,33 @@ export function DashboardPage() {
 
   const [residentDues, setResidentDues] = useState<Due[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadDashboard() {
       setLoading(true);
-      setError('');
+      setError("");
 
       try {
         const [announcementData, maintenanceData] = await Promise.all([
-          getAnnouncements(),
-          isAdmin
-            ? getAllMaintenanceRequests()
-            : getMyMaintenanceRequests(),
-        ]);
+        getAnnouncements(),
+        getAllMaintenanceRequests(),
+      ]);
 
         if (cancelled) return;
 
         setAnnouncements(
           [...announcementData].sort(
             (a, b) =>
-              new Date(b.createdAt).getTime() -
-              new Date(a.createdAt).getTime()
-          )
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          ),
         );
 
         setMaintenanceRequests(maintenanceData);
+        setTotalAnnouncements(announcementData.length);
+        setTotalMaintenanceRequests(maintenanceData.length);
 
         if (isAdmin) {
           const [summary, units] = await Promise.all([
@@ -129,6 +128,8 @@ export function DashboardPage() {
           if (cancelled) return;
 
           setTotalUnits(units);
+          setTotalDues(summary.totalDueCount);
+
           setPaidDues(summary.paidCount);
           setPendingDues(summary.pendingCount);
           setOverdueDues(summary.overdueCount);
@@ -139,20 +140,16 @@ export function DashboardPage() {
 
           setResidentDues(dues);
           setTotalUnits(1);
-          setPaidDues(dues.filter((due) => due.status === 'paid').length);
-          setPendingDues(
-            dues.filter((due) => due.status === 'pending').length
-          );
-          setOverdueDues(
-            dues.filter((due) => due.status === 'overdue').length
-          );
+          setPaidDues(dues.filter((due) => due.status === "paid").length);
+          setPendingDues(dues.filter((due) => due.status === "pending").length);
+          setOverdueDues(dues.filter((due) => due.status === "overdue").length);
         }
       } catch (err) {
         if (!cancelled) {
           setError(
             err instanceof Error
               ? err.message
-              : 'Dashboard verileri yüklenemedi.'
+              : "Dashboard verileri yüklenemedi.",
           );
         }
       } finally {
@@ -174,10 +171,10 @@ export function DashboardPage() {
   }, [user, isAdmin, isResident]);
 
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+    new Date(iso).toLocaleDateString("tr-TR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
 
   const recentAnnouncements = announcements.slice(0, 4);
@@ -186,43 +183,37 @@ export function DashboardPage() {
     const status = String(request.status).toLowerCase();
 
     return ![
-      'completed',
-      'resolved',
-      'closed',
-      'tamamlandı',
-      'cozuldu',
-      'çözüldü',
-      'kapatıldı',
+      "completed",
+      "resolved",
+      "closed",
+      "tamamlandı",
+      "cozuldu",
+      "çözüldü",
+      "kapatıldı",
     ].includes(status);
   });
 
   const recentRequests = [...openRequests]
     .sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime()
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )
     .slice(0, 5);
 
   const nextUnpaidDue = [...residentDues]
-    .filter((due) => due.status !== 'paid')
+    .filter((due) => due.status !== "paid")
     .sort(
-      (a, b) =>
-        new Date(a.dueDate).getTime() -
-        new Date(b.dueDate).getTime()
+      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
     )[0];
 
   return (
-    <Layout
-      title="Genel Bakış"
-      subtitle={`Hoş geldiniz, ${user?.name ?? ''}`}
-    >
+    <Layout title="Genel Bakış" subtitle={`Hoş geldiniz, ${user?.name ?? ""}`}>
       {error && (
         <div
           className="card mb-4"
           style={{
-            padding: 'var(--space-4) var(--space-6)',
-            color: 'var(--color-error)',
+            padding: "var(--space-4) var(--space-6)",
+            color: "var(--color-error)",
           }}
         >
           {error}
@@ -233,27 +224,30 @@ export function DashboardPage() {
       <div className="grid-4 mb-8">
         <StatCard
           icon="🏢"
-          value={loading ? '...' : totalUnits}
-          label={isResident ? 'Dairem' : 'Toplam Daire'}
+          value={loading ? "..." : totalUnits}
+          label={isResident ? "Dairem" : "Toplam Daire"}
           variant="primary"
         />
+
         <StatCard
-          icon="✅"
-          value={loading ? '...' : paidDues}
-          label="Ödeme Yapıldı"
+          icon="📢"
+          value={loading ? "..." : totalAnnouncements}
+          label="Toplam Duyuru"
+          variant="accent"
+        />
+
+        <StatCard
+          icon="💰"
+          value={loading ? "..." : totalDues}
+          label="Toplam Aidat Kaydı"
           variant="success"
         />
+
         <StatCard
-          icon="⏳"
-          value={loading ? '...' : pendingDues}
-          label="Bekleyen Ödeme"
+          icon="🔧"
+          value={loading ? "..." : totalMaintenanceRequests}
+          label="Toplam Arıza Kaydı"
           variant="warning"
-        />
-        <StatCard
-          icon="⚠️"
-          value={loading ? '...' : overdueDues}
-          label="Geciken Ödeme"
-          variant="error"
         />
       </div>
 
@@ -271,9 +265,9 @@ export function DashboardPage() {
             {loading ? (
               <div
                 style={{
-                  padding: 'var(--space-8)',
-                  textAlign: 'center',
-                  color: 'var(--color-text-muted)',
+                  padding: "var(--space-8)",
+                  textAlign: "center",
+                  color: "var(--color-text-muted)",
                 }}
               >
                 Duyurular yükleniyor...
@@ -281,9 +275,9 @@ export function DashboardPage() {
             ) : recentAnnouncements.length === 0 ? (
               <div
                 style={{
-                  padding: 'var(--space-8)',
-                  textAlign: 'center',
-                  color: 'var(--color-text-muted)',
+                  padding: "var(--space-8)",
+                  textAlign: "center",
+                  color: "var(--color-text-muted)",
                 }}
               >
                 Henüz duyuru yok.
@@ -293,15 +287,15 @@ export function DashboardPage() {
                 <div
                   key={ann.id}
                   style={{
-                    padding: 'var(--space-4) var(--space-6)',
-                    borderBottom: '1px solid var(--color-border-light)',
+                    padding: "var(--space-4) var(--space-6)",
+                    borderBottom: "1px solid var(--color-border-light)",
                   }}
                 >
                   <p
                     style={{
                       fontWeight: 600,
-                      fontSize: 'var(--font-size-sm)',
-                      marginBottom: 'var(--space-1)',
+                      fontSize: "var(--font-size-sm)",
+                      marginBottom: "var(--space-1)",
                     }}
                   >
                     {ann.title}
@@ -309,12 +303,12 @@ export function DashboardPage() {
 
                   <p
                     style={{
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-muted)',
-                      display: '-webkit-box',
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-text-muted)",
+                      display: "-webkit-box",
                       WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical' as const,
-                      overflow: 'hidden',
+                      WebkitBoxOrient: "vertical" as const,
+                      overflow: "hidden",
                     }}
                   >
                     {ann.content}
@@ -322,9 +316,9 @@ export function DashboardPage() {
 
                   <p
                     style={{
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-light)',
-                      marginTop: 'var(--space-2)',
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-text-light)",
+                      marginTop: "var(--space-2)",
                     }}
                   >
                     {formatDate(ann.createdAt)}
@@ -348,9 +342,9 @@ export function DashboardPage() {
             {loading ? (
               <div
                 style={{
-                  padding: 'var(--space-8)',
-                  textAlign: 'center',
-                  color: 'var(--color-text-muted)',
+                  padding: "var(--space-8)",
+                  textAlign: "center",
+                  color: "var(--color-text-muted)",
                 }}
               >
                 Talepler yükleniyor...
@@ -358,9 +352,9 @@ export function DashboardPage() {
             ) : recentRequests.length === 0 ? (
               <div
                 style={{
-                  padding: 'var(--space-8)',
-                  textAlign: 'center',
-                  color: 'var(--color-text-muted)',
+                  padding: "var(--space-8)",
+                  textAlign: "center",
+                  color: "var(--color-text-muted)",
                 }}
               >
                 Açık talep yok 🎉
@@ -370,18 +364,18 @@ export function DashboardPage() {
                 <div
                   key={req.id}
                   style={{
-                    padding: 'var(--space-4) var(--space-6)',
-                    borderBottom: '1px solid var(--color-border-light)',
+                    padding: "var(--space-4) var(--space-6)",
+                    borderBottom: "1px solid var(--color-border-light)",
                   }}
                 >
                   <div
                     className="flex items-center justify-between mb-4"
-                    style={{ marginBottom: 'var(--space-1)' }}
+                    style={{ marginBottom: "var(--space-1)" }}
                   >
                     <p
                       style={{
                         fontWeight: 600,
-                        fontSize: 'var(--font-size-sm)',
+                        fontSize: "var(--font-size-sm)",
                       }}
                     >
                       {req.title}
@@ -391,11 +385,11 @@ export function DashboardPage() {
 
                   <p
                     style={{
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-muted)',
+                      fontSize: "var(--font-size-xs)",
+                      color: "var(--color-text-muted)",
                     }}
                   >
-                    📍 {req.location || 'Konum belirtilmemiş'}
+                    📍 {req.location || "Konum belirtilmemiş"}
                     &nbsp;·&nbsp;
                     {formatDate(req.createdAt)}
                   </p>
@@ -409,30 +403,30 @@ export function DashboardPage() {
       {/* Özet Bilgi Kutusu */}
       <div
         style={{
-          marginTop: 'var(--space-6)',
-          padding: 'var(--space-5) var(--space-6)',
+          marginTop: "var(--space-6)",
+          padding: "var(--space-5) var(--space-6)",
           background:
-            'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)',
-          borderRadius: 'var(--radius-lg)',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 'var(--space-4)',
+            "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%)",
+          borderRadius: "var(--radius-lg)",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "var(--space-4)",
         }}
       >
         <div>
-          <h3 style={{ color: '#fff', marginBottom: 'var(--space-1)' }}>
-            Açık Bakım Talebi:{' '}
-            <span style={{ color: 'var(--color-accent)' }}>
-              {loading ? '...' : openRequests.length}
+          <h3 style={{ color: "#fff", marginBottom: "var(--space-1)" }}>
+            Açık Bakım Talebi:{" "}
+            <span style={{ color: "var(--color-accent)" }}>
+              {loading ? "..." : openRequests.length}
             </span>
           </h3>
           <p
             style={{
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: 'var(--font-size-sm)',
+              color: "rgba(255,255,255,0.7)",
+              fontSize: "var(--font-size-sm)",
             }}
           >
             Bekleyen talepler için arıza ve bakım sayfasını ziyaret edin.
@@ -446,7 +440,7 @@ export function DashboardPage() {
 
       {/* Sakin Aidat Durumu */}
       {isResident && (
-        <div className="card mt-4" style={{ marginTop: 'var(--space-6)' }}>
+        <div className="card mt-4" style={{ marginTop: "var(--space-6)" }}>
           <div className="card-header">
             <span className="card-title">💰 Aidat Durumum</span>
           </div>
@@ -459,19 +453,17 @@ export function DashboardPage() {
                 <DueBadge status={nextUnpaidDue.status} />
                 <span className="text-sm">
                   Son ödeme: {formatDate(nextUnpaidDue.dueDate)}
-                  {' · '}
-                  {nextUnpaidDue.amount.toLocaleString('tr-TR', {
-                    style: 'currency',
-                    currency: 'TRY',
+                  {" · "}
+                  {nextUnpaidDue.amount.toLocaleString("tr-TR", {
+                    style: "currency",
+                    currency: "TRY",
                   })}
                 </span>
               </div>
             ) : residentDues.length > 0 ? (
               <div className="flex items-center gap-3">
                 <DueBadge status="paid" />
-                <span className="text-sm">
-                  Ödenmemiş aidatınız bulunmuyor.
-                </span>
+                <span className="text-sm">Ödenmemiş aidatınız bulunmuyor.</span>
               </div>
             ) : (
               <p className="text-sm">Henüz aidat kaydı bulunmuyor.</p>
