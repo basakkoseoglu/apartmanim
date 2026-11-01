@@ -138,6 +138,9 @@
 <p align="center">
   <img src="screenshots/login.png" width="220"/>
   <img src="screenshots/create.png" width="220"/>
+</p>
+
+<p align="center">
   <img src="screenshots/dashboard.png" width="220"/>
   <img src="screenshots/announcements.png" width="220"/>
 </p>
@@ -145,6 +148,9 @@
 <p align="center">
   <img src="screenshots/dues.png" width="220"/>
   <img src="screenshots/maintenance.png" width="220"/>
+</p>
+
+<p align="center">
   <img src="screenshots/apartment-management.png" width="220"/>
   <img src="screenshots/resident-dues.png" width="220"/>
 </p>
