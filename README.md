@@ -1,13 +1,9 @@
  <h1 align="center">🏢 Apartmanım – Dijital Apartman Yönetim Sistemi</h1>
-
-<p align="center">
-  Apartman yönetim süreçlerini dijital ortamda kolaylaştırmak için geliştirilmiş web uygulaması.
+ 
+ <p align="center">
+  <img src="screenshots/portfolio.png" width="100%" alt="Apartmanım Proje Tanıtım Görseli">
 </p>
-
-<p align="center">
-  <strong>React · TypeScript · ASP.NET Core Web API · C# · Entity Framework Core · PostgreSQL</strong>
-</p>
-
+ 
 <h2>📌 Proje Hakkında</h2>
 
 <p>
@@ -132,6 +128,28 @@
     <tr><td>Talep durumunu güncelleme</td><td>✓</td><td>-</td></tr>
   </tbody>
 </table>
+
+## 📸 Uygulama Ekran Görüntüleri
+
+<p align="center">
+  <img src="screenshots/login.png" width="220"/>
+  <img src="screenshots/create.png" width="220"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/dashboard.png" width="220"/>
+  <img src="screenshots/announcements.png" width="220"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/dues.png" width="220"/>
+  <img src="screenshots/maintenance.png" width="220"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/apartment-management.png" width="220"/>
+  <img src="screenshots/resident-dues.png" width="220"/>
+</p>
 
 <h2>🔒 Güvenlik</h2>
 
