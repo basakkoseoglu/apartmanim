@@ -133,6 +133,48 @@
   </tbody>
 </table>
 
+## 📸 Uygulama Ekran Görüntüleri
+
+<h3>🔐 Giriş Ekranı</h3>
+<p align="center">
+  <img src="screenshots/login.png" width="800" alt="Giriş Ekranı">
+</p>
+
+<h3>📊 Yönetici Paneli</h3>
+<p align="center">
+  <img src="screenshots/admin-dashboard.png" width="800" alt="Yönetici Dashboard">
+</p>
+
+<h3>🏠 Apartman ve Daire Yönetimi</h3>
+<p align="center">
+  <img src="screenshots/apartment-management.png" width="800" alt="Apartman Yönetimi">
+</p>
+
+<h3>👥 Sakin Yönetimi</h3>
+<p align="center">
+  <img src="screenshots/residents.png" width="800" alt="Sakin Yönetimi">
+</p>
+
+<h3>📢 Duyuru Yönetimi</h3>
+<p align="center">
+  <img src="screenshots/announcements.png" width="800" alt="Duyurular">
+</p>
+
+<h3>💰 Aidat Yönetimi</h3>
+<p align="center">
+  <img src="screenshots/dues.png" width="800" alt="Aidat Yönetimi">
+</p>
+
+<h3>🛠️ Bakım ve Arıza Talepleri</h3>
+<p align="center">
+  <img src="screenshots/maintenance.png" width="800" alt="Bakım ve Arıza Talepleri">
+</p>
+
+<h3>👤 Apartman Sakini Paneli</h3>
+<p align="center">
+  <img src="screenshots/resident-dashboard.png" width="800" alt="Apartman Sakini Dashboard">
+</p>
+
 <h2>🔒 Güvenlik</h2>
 
 <ul>
